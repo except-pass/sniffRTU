@@ -24,13 +24,13 @@ class Traffic:
     tsdiff='tsdiff'
     def __init__(self, df=None, tablename=None):
         self.df = DB(tablename=tablename).as_df() if df is None else df
-        self.df.loc[:,'ts'] = to_datetime(self.df['ts'])
+        self.df.set_index(to_datetime(self.df['ts']), inplace=True)
 
     def between(self, start=None, end=None):
-        default_start = self.df['ts'].min() if start is None else to_datetime(start)
-        default_end = self.df['ts'].max() if end is None else to_datetime(end)
+        default_start = self.df.index.min() if start is None else to_datetime(start)
+        default_end = self.df.index.max() if end is None else to_datetime(end)
 
-        filtered_df = self.df[(self.df['ts'] >= default_start) & (self.df['ts'] <= default_end)]
+        filtered_df = self.df[(self.df.index >= default_start) & (self.df.index <= default_end)]
         return Traffic(df=filtered_df)
 
 
@@ -102,11 +102,11 @@ class Traffic:
                 except PARSE_ERRORS as e:
                     logger.debug(f"The bytes that follow are not the response due to {e}")
 
-                if resp and resp.check_crc():
+                if resp and resp.check_crc() and (resp.slaveid==msg.slaveid):
                     logger.debug(f'{resp} is a response')
                     
                 else:
-                    logger.debug(f"response CRC failed for {resp}")
+                    logger.debug(f"response failed for {resp}")
                     resp = None
 
 
