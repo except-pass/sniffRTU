@@ -3,5 +3,3 @@ pandas
 pymodbus==2.5.3   #Requires an old version of pymodbus.  New versions use a more confusing async structure
 tinydb
 crc
-plotly
-nbformat>=4.2.0

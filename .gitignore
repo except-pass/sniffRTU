@@ -4,6 +4,7 @@ __pycache__
 .vscode
 *.json
 *.csv
+*.env
 
 # Ignore dynaconf secret files
 sniffRTU/settings.toml

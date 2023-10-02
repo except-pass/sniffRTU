@@ -21,9 +21,8 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    tablename = '20231002_avalonoffgrid'
+    tablename = args.table
     traffic = Traffic(tablename=tablename).between(start=args.start, end=args.end)
-    print(traffic.df)
     hexl = traffic.as_hexl()
     logger.debug(hexl)
 
