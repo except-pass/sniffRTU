@@ -1,0 +1,10 @@
+.venv
+__pycache__
+*.egg-info
+.vscode
+*.json
+*.csv
+
+# Ignore dynaconf secret files
+sniffRTU/settings.toml
+.secrets.*
