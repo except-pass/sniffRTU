@@ -10,6 +10,7 @@ class RTU:
         self.port = port
         self.baudrate = baudrate 
         self.timeout = 3  # Timeout for reading data (in seconds)
+        self.quit = False
 
         self.db = tsdb or DB()
 
@@ -23,7 +24,7 @@ class RTU:
         '''
         start_cap = time.time()
         try:
-            while True:
+            while not self.quit:
                 # Read data from the serial port
                 data = self.ser.read(self.ser.in_waiting)
 
@@ -43,13 +44,13 @@ class RTU:
     def tearDown(self):
         self.ser.close()
 
-def main(args):
-    db = DB(tablename=args.session_name)
+def main(port, baudrate, session_name, capture_period=None):
+    db = DB(tablename=session_name)
     # Create an RTU object based on command-line arguments
-    rtu = RTU(port=args.port, baudrate=args.baudrate, tsdb=db)
+    rtu = RTU(port=port, baudrate=baudrate, tsdb=db)
     
     # Perform the capture with the specified period
-    rtu.capture(period=args.capture_period)
+    rtu.capture(period=capture_period)
 
 if __name__ == '__main__':
     import argparse
@@ -62,4 +63,4 @@ if __name__ == '__main__':
     parser.add_argument('--capture_period', type=float, default=0, help='Capture period in seconds.  Default is forever')
 
     args = parser.parse_args()
-    main(args)
+    main(port=args.port, baudrate=args.baudrate, session_name=args.session_name, capture_period=args.capture_period)
