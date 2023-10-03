@@ -1,19 +1,25 @@
 from datetime import datetime
 import pandas as pd
 from loguru import logger
+from dataclasses import asdict
 
 from sniffRTU.tinytsdb import DB
 from sniffRTU.parsehex import ReadRequest, WriteSingleRequest, Request, BadBytes, PARSE_ERRORS
 
 def to_datetime(ts):
+    if ts is None:
+        return None
     try:
         ts = float(ts)
     except TypeError:
         pass
-
     try:
-        return pd.to_datetime(ts.astype(float), unit='s')
-    except (AttributeError, TypeError):
+        ts = ts.astype(float)
+    except AttributeError:
+        pass
+    try:
+        return pd.to_datetime(ts, unit='s')
+    except TypeError:
         return pd.to_datetime(ts)
 
 class TSStr(str):
@@ -23,14 +29,19 @@ class TSStr(str):
 class Traffic:
     tsdiff='tsdiff'
     def __init__(self, df=None, tablename=None):
+        #df is a dataframe of the raw captured hex data, timestamped
         self.df = DB(tablename=tablename).as_df() if df is None else df
         self.df.set_index(to_datetime(self.df['ts']), inplace=True)
 
     def between(self, start=None, end=None):
-        default_start = self.df.index.min() if start is None else to_datetime(start)
-        default_end = self.df.index.max() if end is None else to_datetime(end)
-
-        filtered_df = self.df[(self.df.index >= default_start) & (self.df.index <= default_end)]
+        filtered_df = self.df.copy()
+        start = to_datetime(start)
+        end = to_datetime(end)
+        if start is not None:
+            filtered_df = filtered_df[filtered_df.index >= start]
+        if end is not None:
+            filtered_df = filtered_df[filtered_df.index <= end]
+        logger.debug(f'filtered from {self.df.shape} to {filtered_df.shape}')
         return Traffic(df=filtered_df)
 
 
@@ -102,11 +113,12 @@ class Traffic:
                 except PARSE_ERRORS as e:
                     logger.debug(f"The bytes that follow are not the response due to {e}")
 
+                #responses must pass crc and must have the same slaveid as the message
                 if resp and resp.check_crc() and (resp.slaveid==msg.slaveid):
                     logger.debug(f'{resp} is a response')
                     
                 else:
-                    logger.debug(f"response failed for {resp}")
+                    logger.debug(f"{resp} is not a valid response to {msg}")
                     resp = None
 
 
@@ -125,3 +137,17 @@ class Traffic:
                 bad_bytes = 0            
                 messages.append(resp)
         return messages
+    def as_df(self):
+        '''
+        Returns a dataframe of the parsed message data
+        '''
+        hexl = self.as_hexl()
+        messages = self.to_messages(hexl=hexl)
+        records = []
+
+        for msg in messages:
+            record = {'ts': msg.ts()}
+            record.update(asdict(msg))
+            record['msg'] = str(msg.__class__.__name__)
+            records.append(record)
+        return pd.DataFrame.from_records(records)
