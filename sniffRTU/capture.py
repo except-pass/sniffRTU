@@ -20,7 +20,8 @@ class RTU:
 
     def capture(self, period=None):
         '''
-        Capture for `period` seconds or unit you hit Ctrl+C.  By default the period is forever
+        Capture for `period` seconds or unit you hit Ctrl+C.  By default the period is forever.
+        Set self.quit to True in another Thread to quit as well
         '''
         start_cap = time.time()
         try:

@@ -28,9 +28,15 @@ class TSStr(str):
 
 class Traffic:
     tsdiff='tsdiff'
-    def __init__(self, df=None, tablename=None):
+    def __init__(self, df=None, tsdb=None, tablename=None):
+        '''
+        Use the raw tsdb data in df.
+        If df is not given, use the database tsdb.
+        If tsdb is also not given, use the default database and tablename
+        '''
+        db = tsdb or DB(tablename=tablename)
         #df is a dataframe of the raw captured hex data, timestamped
-        self.df = DB(tablename=tablename).as_df() if df is None else df
+        self.df = db.as_df() if df is None else df
         self.df.set_index(to_datetime(self.df['ts']), inplace=True)
 
     def between(self, start=None, end=None):
@@ -43,7 +49,6 @@ class Traffic:
             filtered_df = filtered_df[filtered_df.index <= end]
         logger.debug(f'filtered from {self.df.shape} to {filtered_df.shape}')
         return Traffic(df=filtered_df)
-
 
     def as_hexl(self, max_rows=None):
         master_hexl = []
@@ -137,7 +142,8 @@ class Traffic:
                 bad_bytes = 0            
                 messages.append(resp)
         return messages
-    def as_df(self):
+    
+    def as_df(self) -> pd.DataFrame:
         '''
         Returns a dataframe of the parsed message data
         '''
@@ -150,4 +156,6 @@ class Traffic:
             record.update(asdict(msg))
             record['msg'] = str(msg.__class__.__name__)
             records.append(record)
-        return pd.DataFrame.from_records(records)
+        df = pd.DataFrame.from_records(records)
+        #df['dt'] = df['ts'] - df.iloc[0, 'ts']
+        return df
